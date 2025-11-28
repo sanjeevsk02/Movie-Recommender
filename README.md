@@ -1,566 +1,275 @@
-\# Movie Recommender System (Probabilistic Matrix Factorization)
+# Movie Recommender System (PMF + Movie Metadata)
+
+A complete recommendation system that predicts how a user will rate a movie using **Probabilistic Matrix Factorization (PMF)** and movie metadata from the **TMDB** dataset.  
+This project uses the **MovieLens 20M** dataset for ratings and TMDB metadata for movie-level features such as genres, cast, and crew.
+
+The project includes fully implemented training, preprocessing, rating prediction, metadata extraction, and a Streamlit web application for interactive use.
+
+---
+## Table of Contents
+
+- [Project Overview](#project-overview)
+- [Dataset Information](#dataset-information)
+- [Project Structure](#project-structure)
+- [Features](#features)
+- [Installation](#installation)
+- [Dataset Setup](#dataset-setup)
+- [Run TMDB Preprocessing](#run-tmdb-preprocessing)
+- [Training the Model](#training-the-model)
+- [Using the Predictor](#using-the-predictor)
+- [Streamlit Application](#streamlit-application)
+- [Model Architecture](#model-architecture)
 
 
+## Project Overview
 
-This project implements a movie recommender system that predicts how a user will rate a movie using \*\*Probabilistic Matrix Factorization (PMF)\*\* and movie metadata from \*\*TMDB\*\*. The model is trained on the \*\*MovieLens 20M\*\* dataset.
+This project implements a movie recommendation system based on **Probabilistic Matrix Factorization**, enriched with descriptive movie metadata such as:
+
+- Genres  
+- Cast and crew  
+- Keywords  
+- Overview text  
+
+The system learns:
+
+- **User embeddings** based on their rating behavior  
+- **Movie embeddings** based on ratings and metadata  
+- A predicted rating from the dot product of latent factors  
+
+The model is trained on millions of real user ratings from MovieLens, providing a strong collaborative-filtering baseline enhanced by rich movie features.
+
+---
+
+## Dataset Information
+
+The project uses two datasets:
+
+### **1. MovieLens 20M (GroupLens)**
+
+Required files:
+
+| File | Purpose |
+|------|---------|
+| `ratings.csv` | ~20M explicit user ratings |
+| `movies.csv` | Movie titles + genres |
+| (others optional) | Not required for this project |
+
+Download:  
+https://grouplens.org/datasets/movielens/20m/
+
+---
+
+### **2. TMDB 5000 Movie Dataset (Kaggle)**
+
+Required files:
+
+| File | Purpose |
+|------|---------|
+| `tmdb_5000_movies.csv` | Genres, keywords, overview text |
+| `tmdb_5000_credits.csv` | Cast and crew metadata |
+
+Download:  
+https://www.kaggle.com/datasets/tmdb/tmdb-movie-metadata
+
+---
+
+## Project Structure
+
+Your folder should look like this **after downloading the datasets**:
+
+movie-recommender/
+│
+├── app.py
+├── train.py
+├── predict.py
+├── model.py
+├── data_loader.py
+├── tmdb_preprocess.py
+├── demo.ipynb
+│
+├── pmf_model.pth
+├── requirements.txt
+├── README.md
+│
+└── data/
+├── ml-20m/
+│ ├── ratings.csv
+│ ├── movies.csv
+│ └── (other MovieLens files, optional)
+│
+└── tmdb/
+├── tmdb_5000_movies.csv
+├── tmdb_5000_credits.csv
+│
+├── tmdb_features.npy
+├── tmdb_feature_columns.json
+└── tmdb_index_map.json
 
 
+If the raw datasets are not placed in this structure, training and preprocessing will not run.
 
-The repository contains:
+---
+
+## Features
+
+### Data Processing
+
+- Mapping MovieLens movie IDs to TMDB IDs  
+- Cleaning and merging metadata  
+- Parsing JSON fields for cast/crew/genres  
+- Multi-hot encoding of categorical metadata  
+- Extraction of keywords, genres, production info  
+
+### Model Features
+
+- Probabilistic Matrix Factorization  
+- Learnable user and movie embeddings  
+- Metadata projection network  
+- Adam optimizer with regularization  
+- Ratings clamped between 0.5 and 5.0  
+
+### Outputs
+
+- Trained PMF model (`pmf_model.pth`)  
+- TMDB feature matrix (`tmdb_features.npy`)  
+- Movie index mapping (`tmdb_index_map.json`)  
+
+### Streamlit Web App
+
+- Select user  
+- Select movie  
+- Get predicted rating  
+- Clean, minimal interface  
+
+---
+
+## Installation
+
+Install project dependencies:
+
+pip install -r requirements.txt
+
+Dependencies include:
+
+- torch  
+- pandas  
+- numpy  
+- scikit-learn  
+- tqdm  
+- streamlit  
+
+---
+
+## Dataset Setup
+
+After downloading the datasets, place them exactly as follows:
+
+data/ml-20m/ratings.csv
+data/ml-20m/movies.csv
+data/tmdb/tmdb_5000_movies.csv
+data/tmdb/tmdb_5000_credits.csv
+
+Do **not** rename these files.
+
+---
+
+## Run TMDB Preprocessing
+
+Before training, generate processed metadata:
+
+python tmdb_preprocess.py
 
 
+This produces:
 
-\- The full training pipeline
+- `tmdb_features.npy`  
+- `tmdb_index_map.json`  
+- `tmdb_feature_columns.json`
 
-\- A prediction script
+These files are required for training and prediction.
 
-\- A Streamlit web demo
+---
 
-\- A demo notebook for quick inspection of the model
+## Training the Model
+
+Run:
+
+python train.py
+
+This will:
+
+1. Load MovieLens ratings  
+2. Load TMDB metadata  
+3. Create user and movie embeddings  
+4. Train the PMF model  
+5. Save weights to `pmf_model.pth`  
+
+---
+
+## Using the Predictor
+
+Example usage:
+
+```python
+from predict import predict_rating
+
+rating = predict_rating(
+    user_id=1,
+    movie_title="Toy Story (1995)",
+    use_metadata=True
+)
+
+print(rating)
+
+```
+
+The function:
+
+Loads metadata
+
+Loads trained model
+
+Maps user and movie IDs
+
+Returns the predicted rating
+
+---
+
+## Streamlit Application
+Launch the interactive interface:
+
+streamlit run app.py
 
 
+Features include:
 
-Raw datasets (MovieLens 20M and TMDB) are \*\*not included\*\* for size and licensing reasons. Instructions for placing them in the correct folders are provided below.
+User dropdown selection
 
+Movie dropdown selection
+
+Real-time predicted rating
+
+Visual display of rating output
 
 
 ---
 
+## Model Architecture
 
+The PMF model includes:
 
-\## 1. Folder Structure
+User Embedding Matrix
+Learns latent preferences.
 
+Movie Embedding Matrix
+Learns latent movie properties.
 
+Metadata Neural Network
+Projects TMDB metadata into embedding space.
 
-Assuming the project root is called `movie-recommender/`, the expected structure is:
-
-
-
-```text
-
-movie-recommender/
-
-│
-
-├── app.py                  # Streamlit web application
-
-├── train.py                # Training script for the PMF model
-
-├── predict.py              # Utility to predict rating for a user–movie pair
-
-├── model.py                # PMF model definition (PyTorch)
-
-├── data\_loader.py          # Data loading and preprocessing utilities
-
-├── tmdb\_preprocess.py      # Script to preprocess TMDB metadata
-
-├── demo.ipynb              # Jupyter notebook demo (optional inspection)
-
-│
-
-├── pmf\_model.pth           # Trained model weights (created by train.py)
-
-│
-
-├── requirements.txt        # Python dependencies
-
-├── README.md               # This file
-
-│
-
-└── data/
-
-&nbsp;   ├── ml-20m/             # MovieLens 20M dataset (must be downloaded separately)
-
-&nbsp;   │   ├── ratings.csv
-
-&nbsp;   │   ├── movies.csv
-
-&nbsp;   │   ├── tags.csv
-
-&nbsp;   │   ├── links.csv
-
-&nbsp;   │   ├── genome-scores.csv
-
-&nbsp;   │   └── genome-tags.csv
-
-&nbsp;   │
-
-&nbsp;   └── tmdb/               # TMDB metadata (must be downloaded separately)
-
-&nbsp;       ├── tmdb\_5000\_movies.csv
-
-&nbsp;       ├── tmdb\_5000\_credits.csv
-
-&nbsp;       ├── tmdb\_features.npy          # generated by tmdb\_preprocess.py
-
-&nbsp;       ├── tmdb\_index\_map.json        # generated by tmdb\_preprocess.py
-
-&nbsp;       └── tmdb\_feature\_columns.json  # generated by tmdb\_preprocess.py
-
-Notes:
-
-
-
-The data/ml-20m/ and data/tmdb/ folders must be created manually and populated with the raw data files as described below.
-
-
-
-tmdb\_features.npy, tmdb\_index\_map.json, and tmdb\_feature\_columns.json are generated from the raw TMDB CSV files by tmdb\_preprocess.py.
-
-
-
-pmf\_model.pth is created by train.py after training, or can be provided in the repository using Git LFS.
-
-
-
-2\. Dependencies
-
-Install Python dependencies with:
-
-
-
-bash
-
-Copy code
-
-pip install -r requirements.txt
-
-The main libraries used are:
-
-
-
-torch — PMF model and optimization
-
-
-
-numpy, pandas — data handling
-
-
-
-scikit-learn — train/test splitting and metrics
-
-
-
-tqdm — progress bars
-
-
-
-streamlit — web demo UI
-
-
-
-3\. Datasets
-
-3.1 MovieLens 20M
-
-Download the MovieLens 20M dataset from:
-
-
-
-https://grouplens.org/datasets/movielens/20m/
-
-
-
-After downloading and extracting, place the files as:
-
-
-
-text
-
-Copy code
-
-movie-recommender/
-
-└── data/
-
-&nbsp;   └── ml-20m/
-
-&nbsp;       ├── ratings.csv
-
-&nbsp;       ├── movies.csv
-
-&nbsp;       ├── tags.csv
-
-&nbsp;       ├── links.csv
-
-&nbsp;       ├── genome-scores.csv
-
-&nbsp;       └── genome-tags.csv
-
-At minimum, ratings.csv and movies.csv are required by this project. The other files are part of the original dataset and can be present without modification.
-
-
-
-3.2 TMDB Movie Metadata
-
-Download the TMDB dataset from Kaggle:
-
-
-
-https://www.kaggle.com/datasets/tmdb/tmdb-movie-metadata
-
-
-
-From that download, place the following files into:
-
-
-
-text
-
-Copy code
-
-movie-recommender/
-
-└── data/
-
-&nbsp;   └── tmdb/
-
-&nbsp;       ├── tmdb\_5000\_movies.csv
-
-&nbsp;       └── tmdb\_5000\_credits.csv
-
-These two CSV files are used to construct the metadata features (genres, cast, etc.) for each movie.
-
-
-
-4\. Preprocessing TMDB Metadata
-
-Before training the model, TMDB metadata must be preprocessed into numerical features.
-
-
-
-From the project root, run:
-
-
-
-bash
-
-Copy code
-
-python tmdb\_preprocess.py
-
-This script reads:
-
-
-
-data/tmdb/tmdb\_5000\_movies.csv
-
-
-
-data/tmdb/tmdb\_5000\_credits.csv
-
-
-
-and produces:
-
-
-
-data/tmdb/tmdb\_features.npy
-
-
-
-data/tmdb/tmdb\_index\_map.json
-
-
-
-data/tmdb/tmdb\_feature\_columns.json
-
-
-
-These files are then used by data\_loader.py and train.py to incorporate metadata into the model.
-
-
-
-5\. Training the Model
-
-Once:
-
-
-
-MovieLens 20M data is in data/ml-20m/
-
-
-
-TMDB CSVs are in data/tmdb/
-
-
-
-TMDB features have been preprocessed (tmdb\_preprocess.py has been run)
-
-
-
-you can train the PMF model:
-
-
-
-bash
-
-Copy code
-
-python train.py
-
-What train.py does:
-
-
-
-Loads ratings and movie information from data/ml-20m/ratings.csv and data/ml-20m/movies.csv
-
-
-
-Loads the processed TMDB metadata from data/tmdb/tmdb\_features.npy
-
-
-
-Builds user and movie embeddings with PMF
-
-
-
-Trains for a fixed number of epochs (configurable inside train.py)
-
-
-
-Evaluates on a held-out test split using RMSE (and optionally MAE)
-
-
-
-Saves the trained weights to:
-
-
-
-text
-
-Copy code
-
-pmf\_model.pth
-
-If pmf\_model.pth already exists, it will be overwritten unless you change the path in train.py.
-
-
-
-Training on CPU is possible but slow. A GPU (CUDA) is recommended.
-
-
-
-6\. Predicting a Rating from Python
-
-predict.py provides a simple function predict\_rating that uses the trained model to estimate a rating for a given user and movie title.
-
-
-
-Example usage (from a Python shell or script):
-
-
-
-python
-
-Copy code
-
-from predict import predict\_rating
-
-
-
-user\_id = 1
-
-movie\_title = "Toy Story (1995)"  # must match MovieLens title formatting
-
-
-
-rating = predict\_rating(user\_id=user\_id, movie\_title=movie\_title, use\_metadata=True)
-
-print(f"Predicted rating for {movie\_title} by user {user\_id}: {rating:.2f}")
-
-This function:
-
-
-
-Loads the MovieLens mappings (user and movie indices)
-
-
-
-Loads the trained model from pmf\_model.pth
-
-
-
-Looks up the movie by title
-
-
-
-Runs a forward pass through the PMF model
-
-
-
-Returns the predicted rating (typically in the 0.5–5.0 range)
-
-
-
-7\. Running the Streamlit Web App
-
-The Streamlit app provides an interactive interface to the recommender.
-
-
-
-From the project root, run:
-
-
-
-bash
-
-Copy code
-
-streamlit run app.py
-
-The app will:
-
-
-
-Load the trained model (pmf\_model.pth)
-
-
-
-Load the MovieLens movie list
-
-
-
-Let you select:
-
-
-
-A user ID
-
-
-
-A movie title
-
-
-
-Display the predicted rating for that user–movie pair
-
-
-
-Make sure:
-
-
-
-pmf\_model.pth exists (either trained locally or provided),
-
-
-
-data/ml-20m/movies.csv is present,
-
-
-
-TMDB preprocessing (tmdb\_preprocess.py) and training (train.py) have been run at least once.
-
-
-
-8\. Demo Notebook (demo.ipynb)
-
-The notebook demo.ipynb is included as a simple, reproducible demonstration of:
-
-
-
-Loading the trained model
-
-
-
-Computing a prediction for a chosen user–movie pair
-
-
-
-Comparing against a simple baseline (e.g., global mean rating)
-
-
-
-To run the notebook:
-
-
-
-bash
-
-Copy code
-
-jupyter notebook demo.ipynb
-
-or open it directly via VS Code / JupyterLab.
-
-
-
-9\. Notes and Assumptions
-
-The project assumes the MovieLens 20M and TMDB data are correctly downloaded and placed in the data/ folder as described.
-
-
-
-Raw datasets are not included in the repository.
-
-
-
-Some large files (e.g., pmf\_model.pth, tmdb\_features.npy) may be stored using Git LFS and will be fetched automatically when cloning the repository, provided Git LFS is installed.
-
-
-
-Hyperparameters (embedding dimension, learning rate, number of epochs, etc.) can be adjusted in train.py and model.py.
-
-
-
-10\. Reproducibility Checklist
-
-To fully reproduce the system from scratch:
-
-
-
-Create the folder structure as shown under data/.
-
-
-
-Download MovieLens 20M and place the CSV files under data/ml-20m/.
-
-
-
-Download TMDB metadata and place the CSV files under data/tmdb/.
-
-
-
-Install Python dependencies:
-
-
-
-bash
-
-Copy code
-
-pip install -r requirements.txt
-
-Run TMDB preprocessing:
-
-
-
-bash
-
-Copy code
-
-python tmdb\_preprocess.py
-
-Train the model:
-
-
-
-bash
-
-Copy code
-
-python train.py
-
-Run the Streamlit app:
-
-
-
-bash
-
-Copy code
-
-streamlit run app.py
-
-Optionally open demo.ipynb to inspect predictions and evaluation.
+Dot-Product Predictor
+Computes:
+pred_rating = dot(user_vector, movie_vector) + global_bias
+Loss Function
+Mean Squared Error (MSE) with weight decay regularization.
 
