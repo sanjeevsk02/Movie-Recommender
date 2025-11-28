@@ -96,7 +96,9 @@ movie-recommender/
         ├── tmdb_5000_credits.csv
         ├── tmdb_features.npy
         ├── tmdb_feature_columns.json
-        └── tmdb_index_map.json
+        ├── tmdb_index_map.json
+    ├── user_features.npy
+
 ```
 
 ---
