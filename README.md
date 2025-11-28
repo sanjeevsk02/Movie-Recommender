@@ -7,23 +7,6 @@ The project includes fully implemented training, preprocessing, rating predictio
 
 ---
 
-## Table of Contents
-
-- [Project Overview](#project-overview)
-- [Dataset Information](#dataset-information)
-- [Project Structure](#project-structure)
-- [Features](#features)
-- [Installation](#installation)
-- [Dataset Setup](#dataset-setup)
-- [Run TMDB Preprocessing](#run-tmdb-preprocessing)
-- [Training the Model](#training-the-model)
-- [Using the Predictor](#using-the-predictor)
-- [Streamlit Application](#streamlit-application)
-- [Model Architecture](#model-architecture)
-- [Future Enhancements](#future-enhancements)
-- [Contact](#contact)
-
----
 
 ## Project Overview
 
@@ -224,6 +207,7 @@ rating = predict_rating(
 )
 
 print(rating)
+
 The function:
 
 Loads metadata
@@ -234,7 +218,7 @@ Maps user and movie IDs
 
 Returns the predicted rating
 
-Streamlit Application
+## Streamlit Application
 Launch the interactive interface:
 
 streamlit run app.py
@@ -250,7 +234,7 @@ Real-time predicted rating
 
 Visual display of rating output
 
-Model Architecture
+## Model Architecture
 The PMF model includes:
 
 User Embedding Matrix
