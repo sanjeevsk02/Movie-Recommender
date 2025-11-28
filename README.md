@@ -6,6 +6,7 @@ This project uses the **MovieLens 20M** dataset for ratings and TMDB metadata fo
 The project includes fully implemented training, preprocessing, rating prediction, metadata extraction, and a Streamlit web application for interactive use.
 
 ---
+
 ## Table of Contents
 
 - [Project Overview](#project-overview)
@@ -20,6 +21,7 @@ The project includes fully implemented training, preprocessing, rating predictio
 - [Streamlit Application](#streamlit-application)
 - [Model Architecture](#model-architecture)
 
+---
 
 ## Project Overview
 
@@ -34,25 +36,21 @@ The system learns:
 
 - **User embeddings** based on their rating behavior  
 - **Movie embeddings** based on ratings and metadata  
-- A predicted rating from the dot product of latent factors  
+- A predicted rating using the dot product of latent factors  
 
-The model is trained on millions of real user ratings from MovieLens, providing a strong collaborative-filtering baseline enhanced by rich movie features.
+The model is trained on millions of ratings from MovieLens, providing a strong collaborative-filtering baseline enhanced by rich metadata.
 
 ---
 
 ## Dataset Information
 
-The project uses two datasets:
-
 ### **1. MovieLens 20M (GroupLens)**
-
-Required files:
 
 | File | Purpose |
 |------|---------|
 | `ratings.csv` | ~20M explicit user ratings |
 | `movies.csv` | Movie titles + genres |
-| (others optional) | Not required for this project |
+| (others optional) | Not required |
 
 Download:  
 https://grouplens.org/datasets/movielens/20m/
@@ -61,12 +59,10 @@ https://grouplens.org/datasets/movielens/20m/
 
 ### **2. TMDB 5000 Movie Dataset (Kaggle)**
 
-Required files:
-
 | File | Purpose |
 |------|---------|
-| `tmdb_5000_movies.csv` | Genres, keywords, overview text |
-| `tmdb_5000_credits.csv` | Cast and crew metadata |
+| `tmdb_5000_movies.csv` | Genres, keywords, overview |
+| `tmdb_5000_credits.csv` | Cast and crew |
 
 Download:  
 https://www.kaggle.com/datasets/tmdb/tmdb-movie-metadata
@@ -75,8 +71,7 @@ https://www.kaggle.com/datasets/tmdb/tmdb-movie-metadata
 
 ## Project Structure
 
-Your folder should look like this **after downloading the datasets**:
-
+```
 movie-recommender/
 │
 ├── app.py
@@ -92,21 +87,17 @@ movie-recommender/
 ├── README.md
 │
 └── data/
-├── ml-20m/
-│ ├── ratings.csv
-│ ├── movies.csv
-│ └── (other MovieLens files, optional)
-│
-└── tmdb/
-├── tmdb_5000_movies.csv
-├── tmdb_5000_credits.csv
-│
-├── tmdb_features.npy
-├── tmdb_feature_columns.json
-└── tmdb_index_map.json
-
-
-If the raw datasets are not placed in this structure, training and preprocessing will not run.
+    ├── ml-20m/
+    │   ├── ratings.csv
+    │   ├── movies.csv
+    │
+    └── tmdb/
+        ├── tmdb_5000_movies.csv
+        ├── tmdb_5000_credits.csv
+        ├── tmdb_features.npy
+        ├── tmdb_feature_columns.json
+        └── tmdb_index_map.json
+```
 
 ---
 
@@ -114,47 +105,45 @@ If the raw datasets are not placed in this structure, training and preprocessing
 
 ### Data Processing
 
-- Mapping MovieLens movie IDs to TMDB IDs  
-- Cleaning and merging metadata  
-- Parsing JSON fields for cast/crew/genres  
-- Multi-hot encoding of categorical metadata  
-- Extraction of keywords, genres, production info  
+- Map MovieLens IDs to TMDB IDs  
+- Parse JSON fields (genres, cast, crew)  
+- Merge metadata  
+- Multi-hot encode categorical features  
 
 ### Model Features
 
 - Probabilistic Matrix Factorization  
-- Learnable user and movie embeddings  
-- Metadata projection network  
-- Adam optimizer with regularization  
-- Ratings clamped between 0.5 and 5.0  
+- Learnable user + movie embeddings  
+- Metadata projection neural network  
+- Adam optimizer + weight decay  
+- Ratings clamped to `[0.5, 5.0]`
 
 ### Outputs
 
-- Trained PMF model (`pmf_model.pth`)  
-- TMDB feature matrix (`tmdb_features.npy`)  
-- Movie index mapping (`tmdb_index_map.json`)  
+- `pmf_model.pth`  
+- `tmdb_features.npy`  
+- `tmdb_index_map.json`
 
-### Streamlit Web App
+### Streamlit App
 
 - Select user  
 - Select movie  
-- Get predicted rating  
-- Clean, minimal interface  
+- Get predicted rating instantly  
 
 ---
 
 ## Installation
 
-Install project dependencies:
-
+```
 pip install -r requirements.txt
+```
 
-Dependencies include:
+Includes:
 
 - torch  
 - pandas  
 - numpy  
-- scikit-learn  
+- sklearn  
 - tqdm  
 - streamlit  
 
@@ -162,53 +151,50 @@ Dependencies include:
 
 ## Dataset Setup
 
-After downloading the datasets, place them exactly as follows:
+Place files exactly as:
 
+```
 data/ml-20m/ratings.csv
 data/ml-20m/movies.csv
 data/tmdb/tmdb_5000_movies.csv
 data/tmdb/tmdb_5000_credits.csv
-
-Do **not** rename these files.
+```
 
 ---
 
 ## Run TMDB Preprocessing
 
-Before training, generate processed metadata:
-
+```
 python tmdb_preprocess.py
+```
 
-
-This produces:
+Outputs:
 
 - `tmdb_features.npy`  
 - `tmdb_index_map.json`  
 - `tmdb_feature_columns.json`
 
-These files are required for training and prediction.
-
 ---
 
 ## Training the Model
 
-Run:
-
+```
 python train.py
+```
 
 This will:
 
 1. Load MovieLens ratings  
 2. Load TMDB metadata  
-3. Create user and movie embeddings  
-4. Train the PMF model  
-5. Save weights to `pmf_model.pth`  
+3. Create user/movie embeddings  
+4. Train PMF model  
+5. Save `pmf_model.pth`  
 
 ---
 
 ## Using the Predictor
 
-Example usage:
+Example:
 
 ```python
 from predict import predict_rating
@@ -220,37 +206,26 @@ rating = predict_rating(
 )
 
 print(rating)
-
 ```
 
-The function:
-
-Loads metadata
-
-Loads trained model
-
-Maps user and movie IDs
-
-Returns the predicted rating
+Returns predicted rating based on metadata + user/movie embeddings.
 
 ---
 
 ## Streamlit Application
-Launch the interactive interface:
 
+Run:
+
+```
 streamlit run app.py
+```
 
+Features:
 
-Features include:
-
-User dropdown selection
-
-Movie dropdown selection
-
-Real-time predicted rating
-
-Visual display of rating output
-
+- User dropdown  
+- Movie dropdown  
+- Real-time rating output  
+- Clean UI  
 
 ---
 
@@ -258,18 +233,22 @@ Visual display of rating output
 
 The PMF model includes:
 
-User Embedding Matrix
-Learns latent preferences.
+### User Embedding Matrix  
+Represents user preferences.
 
-Movie Embedding Matrix
-Learns latent movie properties.
+### Movie Embedding Matrix  
+Learns movie properties.
 
-Metadata Neural Network
+### Metadata Neural Network  
 Projects TMDB metadata into embedding space.
 
-Dot-Product Predictor
-Computes:
+### Dot-Product Predictor  
+
+```
 pred_rating = dot(user_vector, movie_vector) + global_bias
-Loss Function
-Mean Squared Error (MSE) with weight decay regularization.
+```
+
+### Loss Function  
+Mean Squared Error (MSE) with weight decay.
+
 
