@@ -7,7 +7,7 @@ from model import PMF
 from data_loader import load_data
 
 # ---------------------------------------------------
-# CACHE EVERYTHING (for speed)
+# CACHE EVERYTHING 
 # ---------------------------------------------------
 @st.cache_resource
 def load_all():
@@ -72,7 +72,7 @@ def predict_single(user_id, movie_id):
 
 
 # ---------------------------------------------------
-# Top-K Recommendations (FAST)
+# Top-K Recommendations
 # ---------------------------------------------------
 def recommend_for_user(user_id, top_n=10):
     uid = user_id_map[user_id]
@@ -103,7 +103,7 @@ st.write("Powered by PMF + Metadata + Vectorized Ranking")
 
 
 # TABS
-tab1, tab2 = st.tabs(["🔮 Predict Rating", "🔥 Recommendations"])
+tab1, tab2 = st.tabs([" Predict Rating", "🔥 Recommendations"])
 
 
 # ---------------------------------------------------
