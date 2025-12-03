@@ -6,33 +6,22 @@ import numpy as np
 from model import PMF
 from data_loader import load_data
 
-
 # ---------------------------------------------------
-# Load everything once (simple global cache)
+# CACHE EVERYTHING (for speed)
 # ---------------------------------------------------
-_loaded = False
-model = None
-
-
-def init():
-    global _loaded, model, movies_df, movie_metadata, user_features
-    global user_id_map, movie_id_map, device
-
-    if _loaded:
-        return
-
+@st.cache_resource
+def load_all():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     (
-        train_df, test_df, num_users, num_movies,
+        train_df, _, num_users, num_movies,
         movie_metadata_np, user_id_map, movie_id_map, user_features_np
     ) = load_data()
 
     movie_metadata = torch.tensor(movie_metadata_np, dtype=torch.float32, device=device)
     user_features = torch.tensor(user_features_np, dtype=torch.float32, device=device)
 
-    # Model setup
-    m = PMF(
+    model = PMF(
         num_users=num_users,
         num_movies=num_movies,
         embed_dim=128,
@@ -41,103 +30,114 @@ def init():
         user_metadata_dim=user_features.shape[1]
     ).to(device)
 
-    m.load_state_dict(torch.load("pmf_model.pth", map_location=device))
-    m.eval()
-    model = m
+    model.load_state_dict(torch.load("pmf_model.pth", map_location=device))
+    model.eval()
 
-    # Movie titles lookup
     movies_df = pd.read_csv("data/ml-20m/movies.csv")
     movies_df = movies_df[movies_df["movieId"].isin(movie_id_map.keys())]
 
-    _loaded = True
+    return (
+        model, device, train_df, movies_df, movie_metadata,
+        user_features, user_id_map, movie_id_map
+    )
 
 
 # ---------------------------------------------------
-# Predict rating for one pair
+# Load everything once
 # ---------------------------------------------------
+(
+    model, device, train_df, movies_df, movie_metadata,
+    user_features, user_id_map, movie_id_map
+) = load_all()
+
+
+# ---------------------------------------------------
+# Predict rating for a single user–movie pair
+# ---------------------------------------------------
+def predict_single_vectorized(user_idx, movie_indices):
+    user_tensor = torch.tensor([user_idx] * len(movie_indices), device=device)
+    movie_tensor = torch.tensor(movie_indices, device=device)
+
+    with torch.no_grad():
+        preds = model(user_tensor, movie_tensor, movie_metadata, user_features)
+
+    preds = preds.cpu().numpy()
+    return np.clip(preds, 0.5, 5.0)
+
+
 def predict_single(user_id, movie_id):
     uid = user_id_map[user_id]
     mid = movie_id_map[movie_id]
-
-    u = torch.tensor([uid], device=device)
-    m = torch.tensor([mid], device=device)
-
-    with torch.no_grad():
-        pred = model(u, m, movie_metadata, user_features).item()
-
-    return float(np.clip(pred, 0.5, 5.0))
+    return float(predict_single_vectorized(uid, [mid])[0])
 
 
 # ---------------------------------------------------
-# Simple recommender (looping)
+# Top-K Recommendations (FAST)
 # ---------------------------------------------------
 def recommend_for_user(user_id, top_n=10):
-    scored = []
+    uid = user_id_map[user_id]
 
-    for _, row in movies_df.iterrows():
-        try:
-            r = predict_single(user_id, row["movieId"])
-            scored.append((row["title"], r))
-        except:
-            continue
+    all_movie_ids = list(movie_id_map.keys())
+    mapped_indices = [movie_id_map[m] for m in all_movie_ids]
 
-    scored.sort(key=lambda x: x[1], reverse=True)
-    return scored[:top_n]
+    preds = predict_single_vectorized(uid, mapped_indices)
+
+    df = pd.DataFrame({
+        "movieId": all_movie_ids,
+        "pred_rating": preds
+    })
+
+    df = df.merge(movies_df, on="movieId")
+    df = df.sort_values("pred_rating", ascending=False)
+
+    return df.head(top_n)[["title", "pred_rating"]].values.tolist()
 
 
 # ---------------------------------------------------
-# Streamlit UI
+# STREAMLIT UI
 # ---------------------------------------------------
 st.set_page_config(page_title="CineMatch+", layout="wide")
 
-st.markdown("""
-# 🎬 CineMatch+
-A simple movie recommendation powered by a hybrid PMF model  
-""")
-
-init()
-
-st.markdown("---")
+st.title("🎬 CineMatch+ — Hybrid Movie Recommender")
+st.write("Powered by PMF + Metadata + Vectorized Ranking")
 
 
-# ======= LAYOUT START (Two Column UI) =======
-left, right = st.columns([1.1, 1])
+# TABS
+tab1, tab2 = st.tabs(["🔮 Predict Rating", "🔥 Recommendations"])
 
 
 # ---------------------------------------------------
-# USER SELECT (LEFT)
+# TAB 1 – Predict rating
 # ---------------------------------------------------
-with left:
-    st.subheader("👤 Choose a User")
-    user = st.selectbox("User ID", sorted(user_id_map.keys()))
+with tab1:
+    st.subheader("🔍 Predict a user–movie rating")
 
-    st.markdown("### 🔍 Search a Movie")
-    search = st.text_input("Type part of the movie title...")
+    user = st.selectbox("Select User", sorted(user_id_map.keys()))
+    search = st.text_input("Search movie")
 
     if search:
         matches = movies_df[movies_df["title"].str.contains(search, case=False)]
     else:
-        matches = movies_df.sample(50)  # random small list
+        matches = movies_df.sample(50)
 
-    movie_choice = st.selectbox("Select Movie", matches["title"].tolist())
+    movie_title = st.selectbox("Movie", matches["title"].tolist())
 
-    if st.button("Predict Rating", use_container_width=True):
-        movie_id = movies_df[movies_df["title"] == movie_choice]["movieId"].iloc[0]
+    if st.button("Predict Rating", key="predict_rating"):
+        movie_id = movies_df[movies_df["title"] == movie_title]["movieId"].iloc[0]
         pred = predict_single(user, movie_id)
 
-        st.success(f"### ⭐ Predicted rating: **{pred:.2f} / 5**")
+        st.success(f"⭐ **Predicted Rating:** {pred:.2f} / 5")
 
 
 # ---------------------------------------------------
-# RECOMMENDATIONS (RIGHT)
+# TAB 2 – Recommendations
 # ---------------------------------------------------
-with right:
-    st.subheader("🔥 Top 10 Recommendations")
-    recs = recommend_for_user(user, top_n=10)
+with tab2:
+    st.subheader("🔥 Personalized Top 10 Recommendations")
+
+    user2 = st.selectbox("User", sorted(user_id_map.keys()), key="rec_user")
+
+    recs = recommend_for_user(user2, 10)
 
     for title, score in recs:
-        st.write(f"**{title}**  ⭐ {score:.2f}")
-
-st.markdown("---")
-
-
+        st.write(f"**{title}** — ⭐ {score:.2f}")
