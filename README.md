@@ -224,7 +224,7 @@ streamlit run app.py
 
 Features:
 
-- User dropdown  
+- User id dropdown  
 - Movie dropdown  
 - Real-time rating output  
 - Clean UI  
